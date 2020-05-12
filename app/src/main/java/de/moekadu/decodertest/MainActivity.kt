@@ -80,13 +80,17 @@ class MainActivity : AppCompatActivity() {
         while (true) {
 
             // get input buffer index and then the input buffer itself
-            val inputBufferIndex = codec.dequeueInputBuffer(300000)
+            val inputBufferIndex = codec.dequeueInputBuffer(3000000)
             if (inputBufferIndex < 0) {
-                throw RuntimeException("AudioEncoder.decode: failed to get input buffer index")
+                textViewText.append("AudioEncoder.decode: failed to get input buffer index\n")
+                return floatArrayOf(0f)
             }
 
             val inputBuffer = codec.getInputBuffer(inputBufferIndex)
-                    ?: throw RuntimeException("AudioEncoder.decode: failed to acquire input buffer")
+            if(inputBuffer == null) {
+                textViewText.append("AudioEncoder.decode: failed to acquire input buffer\n")
+                return floatArrayOf(0f)
+            }
 
             // write the next bunch of data from our media file to the input buffer
             val sampleSize = mediaExtractor.readSampleData(inputBuffer, 0)
@@ -100,28 +104,34 @@ class MainActivity : AppCompatActivity() {
             }
 
             // we are done decoding and can now read our result
-            var outputBufferIndex = codec.dequeueOutputBuffer(bufferInfo, 200000)
+            var outputBufferIndex = codec.dequeueOutputBuffer(bufferInfo, 2000000)
 
             // sometimes this output format changed appears, then we have to try again to get
             // the output buffer index again
             if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 // Log.v("AudioMixer", "AudioEncoder.decode: output format changed")
-                outputBufferIndex = codec.dequeueOutputBuffer(bufferInfo, 200000)
+                outputBufferIndex = codec.dequeueOutputBuffer(bufferInfo, 2000000)
             }
 
             // if something fails ....
             if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 // Log.v("AudioMixer", "AudioEncoder.decode: output format changed")
-                throw RuntimeException("Cannot acquire valid output buffer index")
+                textViewText.append("Cannot acquire valid output buffer index\n")
+                return floatArrayOf(0f)
             } else if (outputBufferIndex == MediaCodec.INFO_TRY_AGAIN_LATER) {
                 // Log.v("AudioMixer", "AudioEncoder.decode: try again later")
-                throw RuntimeException("Cannot acquire valid output buffer index")
+                textViewText.append("Cannot acquire valid output buffer index\n")
+                return floatArrayOf(0f)
             }
 
             // finally get our output data and create a view to a short buffer which is the
             // standard data type for 16bit audio
             val outputBuffer = codec.getOutputBuffer(outputBufferIndex)
-                    ?: throw RuntimeException("Cannot acquire output buffer")
+
+            if (outputBuffer == null) {
+                textViewText.append("Cannot acquire output buffer\n")
+                return floatArrayOf(0f)
+            }
 
             val shortBuffer = outputBuffer.order(ByteOrder.nativeOrder()).asShortBuffer()
 
@@ -129,6 +139,10 @@ class MainActivity : AppCompatActivity() {
             // returned later. We want to have mono output stream, so we add different channel
             // to the same index.
             while (shortBuffer.position() < shortBuffer.limit()) {
+                if(numSamples/channelCount >= result.size) {
+                    textViewText.append("Too many samples, something is wrong with track duration")
+                    return result
+                }
                 result[numSamples / channelCount] += shortBuffer.get().toFloat()
                 ++numSamples
             }
