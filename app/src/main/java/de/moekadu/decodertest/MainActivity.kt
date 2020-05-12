@@ -80,7 +80,7 @@ class MainActivity : AppCompatActivity() {
         while (true) {
 
             // get input buffer index and then the input buffer itself
-            val inputBufferIndex = codec.dequeueInputBuffer(3000000)
+            val inputBufferIndex = codec.dequeueInputBuffer(5000000)
             if (inputBufferIndex < 0) {
                 textViewText.append("AudioEncoder.decode: failed to get input buffer index\n")
                 return floatArrayOf(0f)
@@ -104,13 +104,13 @@ class MainActivity : AppCompatActivity() {
             }
 
             // we are done decoding and can now read our result
-            var outputBufferIndex = codec.dequeueOutputBuffer(bufferInfo, 2000000)
+            var outputBufferIndex = codec.dequeueOutputBuffer(bufferInfo, 5000000)
 
             // sometimes this output format changed appears, then we have to try again to get
             // the output buffer index again
             if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 // Log.v("AudioMixer", "AudioEncoder.decode: output format changed")
-                outputBufferIndex = codec.dequeueOutputBuffer(bufferInfo, 2000000)
+                outputBufferIndex = codec.dequeueOutputBuffer(bufferInfo, 5000000)
             }
 
             // if something fails ....
