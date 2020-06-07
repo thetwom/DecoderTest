@@ -68,15 +68,19 @@ class MainActivity : AppCompatActivity() {
         // Log.v("AudioMixer", "AudioEncoder.decode: track count: " + mediaExtractor.trackCount)
         // Log.v("AudioMixer", "AudioEncoder.decode: media codec name: $mediaCodecName")
 
+        if (nFrames > 50000)
+            return floatArrayOf(0f)
+
         val result = FloatArray(10 * nFrames) { 0f }
         // Log.v("AudioMixer", "AudioEncoder.decode: result.size = " + result.size)
 
-        val codec = MediaCodec.createByCodecName(mediaCodecName)
-        //if(mime == null) {
-        //    textViewText.append("no mime\n")
-        //    return floatArrayOf(0f)
-        //}
-        // val codec = MediaCodec.createDecoderByType(mime)
+        //val codec = MediaCodec.createByCodecName(mediaCodecName)
+        if(mime == null) {
+            textViewText.append("no mime\n")
+            return floatArrayOf(0f)
+        }
+        val codec = MediaCodec.createDecoderByType(mime)
+        textViewText.append("codecs name based on mime: ${codec.name}\n")
 
         codec.configure(format, null, null, 0)
         codec.start()
@@ -88,6 +92,7 @@ class MainActivity : AppCompatActivity() {
         var sawOutputEOS = false
         var sawInputEOS = false
         var numNoOutput = 0
+        var counter = 0
 
         while (!sawOutputEOS) {
 
@@ -168,6 +173,13 @@ class MainActivity : AppCompatActivity() {
                     textViewText.append("it seems as I don't get output data from codec\n")
                     break
                 }
+            }
+
+
+            counter++
+            if(counter > 50000) {
+                textViewText.append("stopping decoding early since something seems wrong\n")
+                break
             }
         }
 
