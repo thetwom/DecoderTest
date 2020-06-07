@@ -41,8 +41,16 @@ class MainActivity : AppCompatActivity() {
     fun audioToPCM(id : Int, textViewText : StringBuilder) : FloatArray {
 
         val decodingStart = SystemClock.uptimeMillis()
+
+        textViewText.append("opening ressource\n")
+        text?.text = textViewText.toString()
+        text?.invalidate()
         val sampleFD = resources.openRawResourceFd(id)
         val mediaExtractor = MediaExtractor()
+
+        textViewText.append("setting data source\n")
+        text?.text = textViewText.toString()
+        text?.invalidate()
         mediaExtractor.setDataSource(sampleFD.fileDescriptor, sampleFD.startOffset, sampleFD.length)
         val format = mediaExtractor.getTrackFormat(0)
 
@@ -50,6 +58,10 @@ class MainActivity : AppCompatActivity() {
         val sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
         val duration = format.getLong(MediaFormat.KEY_DURATION)
         val channelCount = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+
+        textViewText.append("getting decoder format\n")
+        text?.text = textViewText.toString()
+        text?.invalidate()
         val mediaCodecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
         val mediaCodecName = mediaCodecList.findDecoderForFormat(format)
 
@@ -67,6 +79,8 @@ class MainActivity : AppCompatActivity() {
         // Log.v("AudioMixer", "AudioEncoder.decode: channel count $channelCount")
         // Log.v("AudioMixer", "AudioEncoder.decode: track count: " + mediaExtractor.trackCount)
         // Log.v("AudioMixer", "AudioEncoder.decode: media codec name: $mediaCodecName")
+        text?.text = textViewText.toString()
+        text?.invalidate()
 
         if (nFrames > 50000)
             return floatArrayOf(0f)
@@ -79,12 +93,26 @@ class MainActivity : AppCompatActivity() {
             textViewText.append("no mime\n")
             return floatArrayOf(0f)
         }
+
+        textViewText.append("creating decoder\n")
+        text?.text = textViewText.toString()
+        text?.invalidate()
         val codec = MediaCodec.createDecoderByType(mime)
         textViewText.append("codecs name based on mime: ${codec.name}\n")
-
+        text?.text = textViewText.toString()
+        textViewText.append("configuring codec\n")
+        text?.text = textViewText.toString()
+        text?.invalidate()
         codec.configure(format, null, null, 0)
+
+        textViewText.append("starting codec\n")
+        text?.text = textViewText.toString()
+        text?.invalidate()
         codec.start()
 
+        textViewText.append("selecting track\n")
+        text?.text = textViewText.toString()
+        text?.invalidate()
         mediaExtractor.selectTrack(0)
         var numSamples = 0
         val bufferInfo = MediaCodec.BufferInfo()
@@ -94,6 +122,9 @@ class MainActivity : AppCompatActivity() {
         var numNoOutput = 0
         var counter = 0
 
+        textViewText.append("starting loop\n")
+        text?.text = textViewText.toString()
+        text?.invalidate()
         while (!sawOutputEOS) {
 
             if(!sawInputEOS) {
@@ -149,6 +180,7 @@ class MainActivity : AppCompatActivity() {
 
                 val shortBuffer = outputBuffer.order(ByteOrder.nativeOrder()).asShortBuffer()
 
+                var c2 = 0
                 // convert the short data to floats and store it to the result-array which will be
                 // returned later. We want to have mono output stream, so we add different channel
                 // to the same index.
@@ -159,6 +191,12 @@ class MainActivity : AppCompatActivity() {
                     }
                     result[numSamples / channelCount] += shortBuffer.get().toFloat()
                     ++numSamples
+                    ++c2
+                   if(c2 > 50000) {
+                       textViewText.append("c2 too big, something is wrong")
+                       return result
+                   }
+
                 }
 
                 codec.releaseOutputBuffer(outputBufferIndex, false)
@@ -187,6 +225,9 @@ class MainActivity : AppCompatActivity() {
         textViewText.append("decoded frames (total)= $numSamples\n")
         textViewText.append("decoded frames (per channel)= ${numSamples/channelCount}\n")
         textViewText.append("time for decoding = ${decodingEnd-decodingStart} ms\n")
+        text?.text = textViewText.toString()
+        text?.invalidate()
+
         mediaExtractor.release()
         codec.stop()
         codec.release()
