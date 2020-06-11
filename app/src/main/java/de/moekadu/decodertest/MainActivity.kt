@@ -23,8 +23,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val sounds = intArrayOf(R.raw.base48, R.raw.snare48, R.raw.sticks48, R.raw. woodblock_high48,
-                R.raw.claves48, R.raw.hihat48, R.raw.mute48)
+        val sounds = intArrayOf(R.raw.mute48, R.raw.base48, R.raw.snare48, R.raw.sticks48, R.raw. woodblock_high48,
+                R.raw.claves48, R.raw.hihat48)
 
         text = findViewById(R.id.text)
 
@@ -50,19 +50,38 @@ class MainActivity : AppCompatActivity() {
 
         val decodingStart = SystemClock.uptimeMillis()
 
+        Log.v("DecoderTest", "openRawRessource")
         val sampleFD = resources.openRawResourceFd(id)
+        Log.v("DecoderTest", "Done")
+
         val mediaExtractor = MediaExtractor()
 
+        Log.v("DecoderTest", "setDataSource")
         mediaExtractor.setDataSource(sampleFD.fileDescriptor, sampleFD.startOffset, sampleFD.length)
+        Log.v("DecoderTest", "Done")
+
+        Log.v("DecoderTest", "getTrackFormat")
         val format = mediaExtractor.getTrackFormat(0)
+        Log.v("DecoderTest", "Done")
 
+        Log.v("DecoderTest", "getMime")
         val mime = format.getString(MediaFormat.KEY_MIME)
+        Log.v("DecoderTest", "mime=$mime")
+        Log.v("DecoderTest", "getSampleRate")
         val sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+        Log.v("DecoderTest", "samplRate=$sampleRate")
+        Log.v("DecoderTest", "getDuration")
         val duration = format.getLong(MediaFormat.KEY_DURATION)
+        Log.v("DecoderTest", "duration=$duration")
+        Log.v("DecoderTest", "getChannelCount")
         val channelCount = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+        Log.v("DecoderTest", "channelCount=$channelCount")
 
+        Log.v("DecoderTest", "create media codec list")
         val mediaCodecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
+        Log.v("DecoderTest", "get media codec name")
         val mediaCodecName = mediaCodecList.findDecoderForFormat(format)
+        Log.v("DecoderTest", "mediaCodecName=$mediaCodecName")
 
         val nFrames = (ceil((duration * sampleRate).toDouble() / 1000000.0)).toInt()
         val nFramesDouble = duration.toDouble() * sampleRate / 1000000.0
@@ -72,6 +91,7 @@ class MainActivity : AppCompatActivity() {
                 .append("channel count = $channelCount\n")
                 .append("codec name = $mediaCodecName\n")
                 .append("expected frame number = $nFrames, (floating point = $nFramesDouble)\n")
+        Log.v("DecoderTest", "nFrames=$nFrames , nFramesDouble=$nFramesDouble")
         // Log.v("AudioMixer", "AudioEncoder.decode: MIME TYPE: $mime")
         // Log.v("AudioMixer", "AudioEncoder.decode: duration $duration")
         // Log.v("AudioMixer", "AudioEncoder.decode: sampleRate = $sampleRate")
@@ -90,14 +110,22 @@ class MainActivity : AppCompatActivity() {
             textViewText.append("no mime\n")
             return floatArrayOf(0f)
         }
-
+        Log.v("DecoderTest", "createDecoderByType")
         val codec = MediaCodec.createDecoderByType(mime)
+        Log.v("DecoderTest", "Done")
         textViewText.append("codecs name based on mime: ${codec.name}\n")
+        Log.v("DecoderTest", "configuring codec")
         codec.configure(format, null, null, 0)
+        Log.v("DecoderTest", "Done")
 
+        Log.v("DecoderTest", "starting codec")
         codec.start()
+        Log.v("DecoderTest", "Done")
 
+        Log.v("DecoderTest", "selecting track")
         mediaExtractor.selectTrack(0)
+        Log.v("DecoderTest", "Done")
+
         var numSamples = 0
         val bufferInfo = MediaCodec.BufferInfo()
         val timeOutUs = 1000L
@@ -129,15 +157,15 @@ class MainActivity : AppCompatActivity() {
                     Log.v("DecoderTest", "Done")
 
                     var presentationTimeUs = 0L
-                    var eosFlag = 0
 
                     if (sampleSize < 0) {
                         sawInputEOS = true
-                        eosFlag = MediaCodec.BUFFER_FLAG_END_OF_STREAM
                         sampleSize = 0
                     } else {
                         presentationTimeUs = mediaExtractor.sampleTime
                     }
+
+                    val eosFlag = if(sawInputEOS) MediaCodec.BUFFER_FLAG_END_OF_STREAM else 0
 
                     // queue the input buffer such that the codec can decode it
                     Log.v("DecoderTest", "queue input buffer")
@@ -175,22 +203,23 @@ class MainActivity : AppCompatActivity() {
                     return floatArrayOf(0f)
                 }
 
-                Log.v("DecoderTest", "create short buffer")
-                val shortBuffer = outputBuffer.order(ByteOrder.nativeOrder()).asShortBuffer()
-                Log.v("DecoderTest", "Done")
+                //Log.v("DecoderTest", "create short buffer")
+                //val shortBuffer = outputBuffer.order(ByteOrder.nativeOrder()).asShortBuffer()
+                //Log.v("DecoderTest", "Done")
 
                 var c2 = 0
                 // convert the short data to floats and store it to the result-array which will be
                 // returned later. We want to have mono output stream, so we add different channel
                 // to the same index.
-                Log.v("DecoderTest", "read short buffer from ${shortBuffer.position()} to ${shortBuffer.limit()}")
-                while (shortBuffer.position() < shortBuffer.limit()) {
+                //Log.v("DecoderTest", "read short buffer from ${shortBuffer.position()} to ${shortBuffer.limit()}")
+                //while (shortBuffer.position() < shortBuffer.limit()) {
+                for(i in 0 until bufferInfo.size step 2) {
                     if(numSamples/channelCount >= result.size) {
                         textViewText.append("Too many samples, something is wrong with track duration")
                         Log.v("DecoderTest", "Too many samples, something is wrong with track duration")
                         return result
                     }
-                    result[numSamples / channelCount] += shortBuffer.get().toFloat()
+                    result[numSamples / channelCount] += outputBuffer.getShort(i).toFloat()
                     ++numSamples
                     ++c2
                    if(c2 > 50000) {
