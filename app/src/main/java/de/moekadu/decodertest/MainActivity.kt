@@ -56,7 +56,7 @@ class MainActivity : AppCompatActivity() {
 
         val mediaExtractor = MediaExtractor()
 
-        Log.v("DecoderTest", "setDataSource")
+        Log.v("DecoderTest", "setDataSource with fileDescriptor=${sampleFD.fileDescriptor}, startOffset=${sampleFD.startOffset}, length=${sampleFD.length}")
         mediaExtractor.setDataSource(sampleFD.fileDescriptor, sampleFD.startOffset, sampleFD.length)
         Log.v("DecoderTest", "Done")
 
