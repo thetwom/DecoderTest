@@ -10,7 +10,7 @@ android {
         applicationId "de.moekadu.decodertest"
         minSdkVersion 23
         targetSdkVersion 29
-        versionCode 8
+        versionCode 9
         versionName "8.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
