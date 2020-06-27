@@ -11,20 +11,19 @@ import android.text.method.ScrollingMovementMethod
 import android.util.Log
 import android.widget.Button
 import android.widget.TextView
-import java.nio.ByteOrder
 import kotlin.math.ceil
 
 class MainActivity : AppCompatActivity() {
 
     var text : TextView? = null
     var isound = 0
+    val sounds = intArrayOf(R.raw.snare48, R.raw.mute48, R.raw.base48, R.raw.sticks48, R.raw. woodblock_high48,
+        R.raw.claves48, R.raw.hihat48)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val sounds = intArrayOf(R.raw.mute48, R.raw.base48, R.raw.snare48, R.raw.sticks48, R.raw. woodblock_high48,
-                R.raw.claves48, R.raw.hihat48)
 
         text = findViewById(R.id.text)
 
@@ -33,17 +32,23 @@ class MainActivity : AppCompatActivity() {
         val button = findViewById<Button>(R.id.button)
 
         button.setOnClickListener {
-            if(isound == sounds.size)
-                isound = 0
-            val textViewText = StringBuilder()
-            textViewText.append("Decoding sound $isound \n")
-            audioToPCM(sounds[isound], textViewText)
-            textViewText.append("\n")
-
-            text?.text = textViewText.toString()
-            text?.invalidate()
-            ++isound
+            printNextInfo()
         }
+
+        printNextInfo()
+    }
+
+    fun printNextInfo() {
+        if(isound == sounds.size)
+            isound = 0
+        val textViewText = StringBuilder()
+        textViewText.append("Decoding sound $isound \n")
+        audioToPCM(sounds[isound], textViewText)
+        textViewText.append("\n")
+
+        text?.text = textViewText.toString()
+        text?.invalidate()
+        ++isound
     }
 
     fun audioToPCM(id : Int, textViewText : StringBuilder) : FloatArray {
@@ -134,6 +139,10 @@ class MainActivity : AppCompatActivity() {
         var numNoOutput = 0
         var counter = 0
 
+        val shortString = StringBuilder()
+        val byteString = StringBuilder()
+
+
         while (!sawOutputEOS) {
 
             if(!sawInputEOS) {
@@ -220,6 +229,11 @@ class MainActivity : AppCompatActivity() {
                         return result
                     }
                     result[numSamples / channelCount] += outputBuffer.getShort(i).toFloat()
+                    if(numSamples/channelCount < 50){
+                    Log.v("DecoderTest", "Value ${numSamples/channelCount} = ${outputBuffer.getShort(i).toFloat()}, byte[$i] = ${outputBuffer[i]}, byte[${i+1}] =${outputBuffer[i+1]}")
+                        shortString.append(" ${outputBuffer.getShort(i)}")
+                        byteString.append(" ${outputBuffer[i]} ${outputBuffer[i+1]}")
+                    }
                     ++numSamples
                     ++c2
                    if(c2 > 50000) {
@@ -260,6 +274,8 @@ class MainActivity : AppCompatActivity() {
         textViewText.append("decoded frames (total)= $numSamples\n")
         textViewText.append("decoded frames (per channel)= ${numSamples/channelCount}\n")
         textViewText.append("time for decoding = ${decodingEnd-decodingStart} ms\n")
+        textViewText.append("shorts: ${shortString}\n")
+        textViewText.append("bytes: ${byteString}\n")
 
         mediaExtractor.release()
         codec.stop()
